@@ -1,0 +1,22 @@
+epel_repo:
+- os: Rocky
+  package: epel-release
+dev_packages:
+- os: RedHat
+  packages:
+  - "@Development Tools"
+  - python3-pip
+  - numactl-devel
+  - glibc
+  - pciutils
+  - dmidecode
+  - numactl
+pip_modules:
+- meson
+- ninja
+- pyelftools
+dpdk_tool: https://fast.dpdk.org/rel/dpdk-24.03.tar.xz
+hugepages:
+- node: node0
+  size: 2048 # In KB
+  reserve: 64 # No. of pages
