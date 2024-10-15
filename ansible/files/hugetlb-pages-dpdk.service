@@ -1,0 +1,14 @@
+[Unit]
+Description=HugeTLB Pages Reservation for DPDK
+DefaultDependencies=no
+Before=dev-hugepages.mount
+ConditionPathExists=/sys/devices/system/node
+ConditionKernelCommandLine=hugepagesz=2M
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/lib/systemd/hugetlb-pages-dpdk.sh
+
+[Install]
+WantedBy=sysinit.target

@@ -11,12 +11,30 @@ dev_packages:
   - pciutils
   - dmidecode
   - numactl
+  - libpcap-devel
+  - libbsd
+  - libbsd-devel
+  - libfdt
+  - gnulib-devel
+  - libarchive
+  - libarchive-devel
+  - jansson
+  - libxdp
+  - libbpf
+  - libbpf-tools
+  - libibverbs
+  - libibverbs-utils
+  - cmake
 pip_modules:
 - meson
 - ninja
 - pyelftools
 dpdk_tool: https://fast.dpdk.org/rel/dpdk-24.03.tar.xz
+dpdk_interface: eth1
 hugepages:
-- node: node0
-  size: 2048 # In KB
-  reserve: 64 # No. of pages
+  default_hugepagesz: 2M
+  hugepagesz: 2M
+  nodes:
+  - node: node0
+    size: 2048 # In KB
+    reserve: 512 # No. of pages, total 1GB memory will be reserved

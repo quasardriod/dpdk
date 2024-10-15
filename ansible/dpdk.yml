@@ -4,6 +4,7 @@
 
   vars_files:
   - ./vars/main.yml
+
   tasks:
   - name: Install epel repo
     ansible.builtin.dnf:
@@ -29,20 +30,90 @@
       url: "{{ dpdk_tool }}"
       dest: /root/
 
-  - name: Check if /dev/hugepages is already mounted
-    ansible.builtin.command: findmnt /dev/hugepages
-    register: _hpmnt
+  # Temporary Method
+  # - name: Check if /dev/hugepages is already mounted
+  #   ansible.builtin.command: findmnt /dev/hugepages
+  #   register: _hpmnt
+  #   ignore_errors: true
+
+  # - name: Mount /dev/hugepages
+  #   ansible.builtin.shell: |
+  #     mkdir -p /dev/hugepages
+  #     mountpoint -q /dev/hugepages || mount -t hugetlbfs nodev /dev/hugepages
+  #   when: _hpmnt.rc != 0
+
+  # - name: Reserve the hugepages
+  #   ansible.builtin.shell: |
+  #     echo {{ item.reserve }} > /sys/devices/system/node/{{ item.node }}/hugepages/hugepages-{{ item.size }}kB/nr_hugepages
+  #   with_items: "{{ hugepages }}"
+
+  - name: Set huge pages permanently
+    block:
+    - name: Enable default_hugepagesz and hugepagesz kernel options
+      ansible.builtin.command: grubby --update-kernel=ALL --args="default_hugepagesz={{ hugepages.default_hugepagesz }} hugepagesz={{ hugepages.hugepagesz }}"
+      register: _update_grub_param
+
+    - name: os-tuning | Generate grub config for RedHat machines
+      ansible.builtin.command: grub2-mkconfig -o /boot/grub2/grub.cfg
+      register: _initd
+      when:
+      - ansible_os_family in ["RedHat"]
+      - _update_grub_param is changed
+
+    - name: Copy hugetlb files
+      ansible.builtin.copy:
+        src: "{{ item.src }}"
+        dest: "{{ item.dest }}"
+        mode: "{{ item.permission }}"
+        owner: root
+        group: root
+      with_items:
+      - {src: 'hugetlb-pages-dpdk.service', dest: '/usr/lib/systemd/system/', permission: '0644'}
+      - {src: 'hugetlb-pages-dpdk.sh', dest: '/usr/lib/systemd/', permission: '0744',}
+
+    - name: Enable hugetlb-pages-dpdk service
+      ansible.builtin.systemd:
+        name: hugetlb-pages-dpdk.service
+        enabled: yes
+        daemon_reload: yes
+
+    - name: Reboot machine
+      ansible.builtin.reboot:
+        test_command: update
+      when: _initd is changed or _update_grub_param is changed
+    when:
+    - ansible_cmdline['default_hugepagesz'] is not defined or ansible_cmdline['default_hugepagesz'] != hugepages.default_hugepagesz
+    - ansible_cmdline['hugepagesz'] is not defined or ansible_cmdline['hugepagesz'] != hugepages.hugepagesz
+
+  - name: Check if eth1 is in routing table
+    ansible.builtin.shell: ip r|egrep -q "{{ dpdk_interface }}"
     ignore_errors: true
+    register: _eth1_stat
 
-  - name: Mount /dev/hugepages
+  - name: Remove eth1 routes
+    ansible.builtin.shell: ip r|egrep {{ dpdk_interface }}| awk -F"proto" '{print "ip route delete "$1}'|sh
+    when: _eth1_stat.rc == 0
+
+  - name: Create /etc/modules-load.d/vfio.conf
+    ansible.builtin.copy:
+      content: |
+        vfio-pci
+      dest: /etc/modules-load.d/vfio.conf
+      mode: 0644
+      owner: root
+      group: root
+
+  - name: Create /etc/modprobe.d/vfio-noiommu.conf
+    ansible.builtin.copy:
+      content: |
+        options vfio enable_unsafe_noiommu_mode=1
+      dest: /etc/modprobe.d/vfio-noiommu.conf
+      mode: 0644
+      owner: root
+      group: root
+
+  - name: Ensure vfio-pci is loaded with "no-IOMMU" mode
     ansible.builtin.shell: |
-      mkdir -p /dev/hugepages
-      mountpoint -q /dev/hugepages || mount -t hugetlbfs nodev /dev/hugepages
-    when: _hpmnt.rc != 0
-
-  - name: Reserve the hugepages
-    ansible.builtin.shell: |
-      echo {{ item.reserve }} > /sys/devices/system/node/{{ item.node }}/hugepages/hugepages-{{ item.size }}kB/nr_hugepages
-    with_items: "{{ hugepages }}"
-
+      modprobe vfio-pci
+      echo 1 > /sys/module/vfio/parameters/enable_unsafe_noiommu_mode
 

@@ -1,4 +1,6 @@
-[IOMMU](#iommu)
+
+- [IOMMU](#iommu)
+- [Hugepages](#hugepages)
 
 ## IOMMU
 - [An Introduction to IOMMU Infrastructure in the Linux Kernel](https://lenovopress.lenovo.com/lp1467-an-introduction-to-iommu-infrastructure-in-the-linux-kernel)
@@ -18,3 +20,10 @@ $ ls -l /sys/class/iommu/
 total 0
 ```
 - https://github.com/zylan29/dpdk-pingpong
+
+## Hugepages
+Huge page methods:
+- HugeTLB pages
+  - TLB: Translation Lookaside Buffer
+- Transparent HugePages (THP)
+Check [Configuring huge pages](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/9/html/monitoring_and_managing_system_status_and_performance/configuring-huge-pages_monitoring-and-managing-system-status-and-performance#parameters-for-reserving-hugetlb-pages-at-boot-time_configuring-huge-pages) for more information

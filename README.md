@@ -36,10 +36,11 @@ NIC:
 - Configure `Hugepages`
 
 #### Run DPDK Config playbook
+By default `dpdk.sh` reads inventory from `ansible/inventory/dpdk-inv`. To use custom inventory, use below example.
+
 ```bash
 ./dpdk.sh <inventory_file>
 ```
-
 
 ## Hugepages
 ***
@@ -60,6 +61,15 @@ $ meson build
 $ ninja -C build
 ```
 
+Create `dpdk.conf` to load all dpdk installed libraries.
+```bash
+$ cat /etc/ld.so.conf.d/dpdk.conf 
+/usr/local/lib64
+/usr/local/lib64/pkgconfig
+/usr/local/lib64/dpdk/pmds-24.1
+
+$ ldconfig
+```
 ## Linux Drivers
 ***
 **Official Documentation:** https://doc.dpdk.org/guides/linux_gsg/linux_drivers.html#
